@@ -17,3 +17,4 @@ C:\Users\shaha\Downloads\Compressed\F12ClickerAutoClicker_FullReady\F12ClickerAu
 C:\Users\shaha\Downloads\Compressed\F12ClickerAutoClicker_FullReady\F12ClickerAutoClicker\bin\Debug\net6.0-windows\HtmlAgilityPack.dll
 C:\Users\shaha\Downloads\Compressed\F12ClickerAutoClicker_FullReady\F12ClickerAutoClicker\obj\Debug\net6.0-windows\F12ClickerAutoClicker.csproj.AssemblyReference.cache
 C:\Users\shaha\Downloads\Compressed\F12ClickerAutoClicker_FullReady\F12ClickerAutoClicker\obj\Debug\net6.0-windows\F12Click.2780B409.Up2Date
+C:\Users\shaha\Downloads\Compressed\F12ClickerAutoClicker_FullReady\F12ClickerAutoClicker\obj\Debug\net6.0-windows\F12ClickerAutoClicker.sourcelink.json

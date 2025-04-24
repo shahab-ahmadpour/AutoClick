@@ -3,6 +3,10 @@
     partial class MainForm
     {
         private System.ComponentModel.IContainer components = null;
+        //private System.Windows.Forms.Button btnTestTime;
+
+
+
 
         private void InitializeComponent()
         {
@@ -16,6 +20,7 @@
             btnBrowseConfig = new System.Windows.Forms.Button();
             btnStart = new System.Windows.Forms.Button();
             SuspendLayout();
+
             // 
             // lblServerTime
             // 
@@ -128,6 +133,16 @@
             Text = "F12 Auto Clicker";
             ResumeLayout(false);
             PerformLayout();
+
+            //btnTestTime = new System.Windows.Forms.Button();
+            //btnTestTime.Location = new System.Drawing.Point(200, 270);
+            //btnTestTime.Name = "btnTestTime";
+            //btnTestTime.Size = new System.Drawing.Size(100, 30);
+            //btnTestTime.TabIndex = 17;
+            //btnTestTime.Text = "Test Time API";
+            //btnTestTime.UseVisualStyleBackColor = true;
+            //btnTestTime.Click += btnTestTime_Click;
+            //Controls.Add(btnTestTime);
         }
 
         private System.Windows.Forms.RadioButton radioManual;
