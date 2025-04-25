@@ -145,6 +145,15 @@
             //Controls.Add(btnTestTime);
         }
 
+        private void UpdateServerTimeLabel()
+        {
+            // تغییر ظاهر lblServerTime برای نمایش میلی‌ثانیه
+            lblServerTime.AutoSize = true;
+            lblServerTime.Font = new System.Drawing.Font("Consolas", 12F, System.Drawing.FontStyle.Bold);
+            lblServerTime.Size = new System.Drawing.Size(150, 34);
+            lblServerTime.Text = "00:00:00.000";
+        }
+
         private System.Windows.Forms.RadioButton radioManual;
         private System.Windows.Forms.RadioButton radioFromFile;
         private System.Windows.Forms.TextBox txtManualTime;

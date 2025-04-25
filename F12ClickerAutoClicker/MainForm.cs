@@ -186,79 +186,131 @@ namespace F12ClickerAutoClicker
             try
             {
                 using HttpClient client = new HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
                 client.Timeout = TimeSpan.FromSeconds(10);
 
                 // دریافت پاسخ از سرور
-                var response = await client.GetStringAsync(url);
-                Console.WriteLine("Raw API Response: " + response);
+                HttpResponseMessage response = await client.GetAsync(url);
 
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"API returned status code: {response.StatusCode}");
+                    return null;
+                }
+
+                string responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"API Response from {url}: {responseContent}");
+
+                // کد پارس کردن بر اساس نوع سرور
                 if (url.Contains("keybit.ir"))
                 {
-                    // پارس کردن با محافظت کامل
-                    try
-                    {
-                        using JsonDocument doc = JsonDocument.Parse(response);
-
-                        // ساختار date.time.full
-                        if (doc.RootElement.TryGetProperty("date", out var dateElement))
-                        {
-                            if (dateElement.TryGetProperty("time", out var timeElement) &&
-                                timeElement.TryGetProperty("full", out var fullElement))
-                            {
-                                var timeStr = fullElement.GetString();
-                                Console.WriteLine("Found time string: " + timeStr);
-                                if (DateTime.TryParse(timeStr, out DateTime parsedTime))
-                                {
-                                    return parsedTime;
-                                }
-                            }
-                        }
-
-                        // جستجوی ساختار time.hour/minute/second
-                        if (doc.RootElement.TryGetProperty("time", out var directTimeElement))
-                        {
-                            Console.WriteLine("Found time object");
-                            if (directTimeElement.ValueKind == JsonValueKind.Object)
-                            {
-                                if (directTimeElement.TryGetProperty("hour", out var hourElement) &&
-                                    directTimeElement.TryGetProperty("minute", out var minuteElement) &&
-                                    directTimeElement.TryGetProperty("second", out var secondElement))
-                                {
-                                    int hour = hourElement.GetInt32();
-                                    int minute = minuteElement.GetInt32();
-                                    int second = secondElement.GetInt32();
-                                    Console.WriteLine($"Found time components: {hour}:{minute}:{second}");
-                                    return DateTime.Today.Add(new TimeSpan(hour, minute, second));
-                                }
-                            }
-                            else if (directTimeElement.ValueKind == JsonValueKind.String)
-                            {
-                                var timeStr = directTimeElement.GetString();
-                                if (DateTime.TryParse(timeStr, out DateTime parsedTime))
-                                {
-                                    return parsedTime;
-                                }
-                            }
-                        }
-
-                        Console.WriteLine("Could not find expected time structure in JSON");
-                    }
-                    catch (JsonException jex)
-                    {
-                        Console.WriteLine("JSON parsing error: " + jex.Message);
-                    }
+                    return ParseKeybitResponse(responseContent);
+                }
+                else if (url.Contains("worldtimeapi.org"))
+                {
+                    return ParseWorldTimeApiResponse(responseContent);
+                }
+                else if (url.Contains("timeapi.io"))
+                {
+                    return ParseTimeApiIoResponse(responseContent);
                 }
 
                 return null;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error fetching/parsing time: " + ex.Message);
+                Console.WriteLine($"Error fetching time from {url}: {ex.Message}");
                 return null;
             }
         }
 
+        private DateTime? ParseKeybitResponse(string responseContent)
+        {
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(responseContent);
 
+                if (doc.RootElement.TryGetProperty("date", out var dateElement) &&
+                    dateElement.TryGetProperty("time", out var timeElement))
+                {
+                    // تلاش برای خواندن زمان کامل
+                    if (timeElement.TryGetProperty("full", out var fullElement))
+                    {
+                        string timeStr = fullElement.GetString();
+                        if (TimeSpan.TryParse(timeStr, out TimeSpan timeOfDay))
+                        {
+                            DateTime now = DateTime.Now;
+                            return new DateTime(now.Year, now.Month, now.Day,
+                                timeOfDay.Hours, timeOfDay.Minutes, timeOfDay.Seconds);
+                        }
+                    }
+                    // تلاش برای خواندن ساعت/دقیقه/ثانیه
+                    else if (timeElement.TryGetProperty("hour", out var hourElement) &&
+                            timeElement.TryGetProperty("minute", out var minuteElement) &&
+                            timeElement.TryGetProperty("second", out var secondElement))
+                    {
+                        int hour = hourElement.GetInt32();
+                        int minute = minuteElement.GetInt32();
+                        int second = secondElement.GetInt32();
+
+                        DateTime now = DateTime.Now;
+                        return new DateTime(now.Year, now.Month, now.Day, hour, minute, second);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error parsing keybit response: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        private DateTime? ParseWorldTimeApiResponse(string responseContent)
+        {
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(responseContent);
+
+                if (doc.RootElement.TryGetProperty("datetime", out var datetimeElement))
+                {
+                    string datetimeStr = datetimeElement.GetString();
+                    if (DateTime.TryParse(datetimeStr, out DateTime result))
+                    {
+                        return result;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error parsing worldtimeapi response: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        private DateTime? ParseTimeApiIoResponse(string responseContent)
+        {
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(responseContent);
+
+                if (doc.RootElement.TryGetProperty("dateTime", out var datetimeElement))
+                {
+                    string datetimeStr = datetimeElement.GetString();
+                    if (DateTime.TryParse(datetimeStr, out DateTime result))
+                    {
+                        return result;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error parsing timeapi.io response: {ex.Message}");
+            }
+
+            return null;
+        }
 
         private void cmbServerList_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -271,9 +323,12 @@ namespace F12ClickerAutoClicker
         private void LoadServerList()
         {
             List<string> servers = new List<string>
-            {
-                "https://api.keybit.ir/time/"
-            };
+    {
+        "https://api.keybit.ir/time/",
+        "https://worldtimeapi.org/api/timezone/Asia/Tehran",
+        "https://time.ir"
+        // می‌توانید سرور‌های دیگر مانند api.time.ir نیز اضافه کنید
+    };
 
             cmbServerList.Items.Clear();
             foreach (var server in servers)
@@ -285,6 +340,18 @@ namespace F12ClickerAutoClicker
             {
                 cmbServerList.SelectedIndex = 0;
             }
+        }
+
+
+        private async Task<DateTime?> GetTimeWithRetry()
+        {
+            foreach (string server in cmbServerList.Items)
+            {
+                var time = await GetServerTimeFromUrl(server);
+                if (time.HasValue)
+                    return time;
+            }
+            return null;
         }
 
         //private async void btnTestTime_Click(object sender, EventArgs e)
@@ -361,34 +428,148 @@ namespace F12ClickerAutoClicker
         private void SetupSimpleTimeUpdater()
         {
             _updateTimer = new System.Windows.Forms.Timer();
-            _updateTimer.Interval = 1000; // هر 5 ثانیه
+            _updateTimer.Interval = 10; // هر 10 میلی‌ثانیه به‌روزرسانی (برای نمایش دقیق‌تر)
             _updateTimer.Tick += async (s, e) =>
             {
-                _updateTimer.Stop(); // توقف تایمر برای جلوگیری از فراخوانی همزمان
+                // نمایش آنی زمان محلی بهینه شده با میلی‌ثانیه
+                DateTime localTime = DateTime.Now;
+                lblServerTime.Text = localTime.ToString("HH:mm:ss.fff");
 
-                try
+                // هر 5 ثانیه یکبار با سرور همگام‌سازی می‌کنیم (برای کاهش فشار شبکه)
+                if (localTime.Second % 5 == 0 && localTime.Millisecond < 50)
                 {
-                    var time = await GetServerTimeFromKeybit();
-                    if (time.HasValue)
+                    try
                     {
-                        serverTime = time.Value;
-                        lblServerTime.Text = serverTime.ToString("HH:mm:ss");
+                        var serverTimeResult = await GetServerTimeWithHighPrecision();
+                        if (serverTimeResult.HasValue)
+                        {
+                            // ذخیره اختلاف زمانی بین سرور و سیستم محلی
+                            TimeSpan timeDifference = serverTimeResult.Value - DateTime.Now;
+                            _serverTimeDifference = timeDifference;
+
+                            // به‌روزرسانی متغیر زمان سرور
+                            serverTime = serverTimeResult.Value;
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        lblServerTime.Text = DateTime.Now.ToString("HH:mm:ss");
+                        Console.WriteLine("Server time sync error: " + ex.Message);
                     }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Update timer error: " + ex.Message);
-                    lblServerTime.Text = DateTime.Now.ToString("HH:mm:ss");
-                }
 
-                _updateTimer.Start(); // شروع مجدد تایمر
+                // تنظیم زمان نمایشی بر اساس زمان محلی + اختلاف با سرور
+                DateTime adjustedTime = DateTime.Now.Add(_serverTimeDifference);
+                lblServerTime.Text = adjustedTime.ToString("HH:mm:ss.fff");
             };
 
             _updateTimer.Start();
+
+            // همگام‌سازی اولیه با سرور
+            SyncWithServerAsync();
         }
+        // متغیر جدید برای نگهداری اختلاف زمانی
+        private TimeSpan _serverTimeDifference = TimeSpan.Zero;
+
+        // متد جدید برای همگام‌سازی اولیه
+        private async void SyncWithServerAsync()
+        {
+            try
+            {
+                var serverTimeResult = await GetServerTimeWithHighPrecision();
+                if (serverTimeResult.HasValue)
+                {
+                    _serverTimeDifference = serverTimeResult.Value - DateTime.Now;
+                    serverTime = serverTimeResult.Value;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Initial server time sync error: " + ex.Message);
+            }
+        }
+
+        // متد دریافت زمان با دقت بالا
+        private async Task<DateTime?> GetServerTimeWithHighPrecision()
+        {
+            Stopwatch stopwatch = new Stopwatch();
+            DateTime requestStartTime = DateTime.Now;
+            stopwatch.Start();
+
+            try
+            {
+                using HttpClient client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(3); // کاهش timeout برای دقت بیشتر
+
+                // ارسال درخواست به سرور زمان
+                string url = selectedServerUrl;
+                HttpResponseMessage response = await client.GetAsync(url);
+
+                // زمان دریافت پاسخ
+                stopwatch.Stop();
+                TimeSpan roundTripTime = stopwatch.Elapsed;
+
+                // محاسبه تقریبی زمان one-way delay
+                TimeSpan networkDelay = TimeSpan.FromMilliseconds(roundTripTime.TotalMilliseconds / 2);
+
+                string responseContent = await response.Content.ReadAsStringAsync();
+
+                // بسته به سرور انتخابی، پردازش پاسخ متفاوت خواهد بود
+                if (url.Contains("keybit.ir"))
+                {
+                    using JsonDocument doc = JsonDocument.Parse(responseContent);
+
+                    // پردازش API کی‌بیت
+                    if (doc.RootElement.TryGetProperty("date", out var dateElement) &&
+                        dateElement.TryGetProperty("time", out var timeElement) &&
+                        timeElement.TryGetProperty("full", out var fullElement))
+                    {
+                        string timeStr = fullElement.GetString();
+
+                        // دریافت تاریخ کامل
+                        if (doc.RootElement.TryGetProperty("date", out var dateObj) &&
+                            dateObj.TryGetProperty("gregorian", out var gregObj) &&
+                            gregObj.TryGetProperty("full", out var fullDateObj))
+                        {
+                            string dateStr = fullDateObj.GetString();
+
+                            // ترکیب تاریخ و زمان
+                            if (DateTime.TryParse($"{dateStr} {timeStr}", out DateTime serverTime))
+                            {
+                                // تنظیم با در نظر گرفتن تأخیر شبکه
+                                return serverTime.Add(networkDelay);
+                            }
+                        }
+                    }
+                }
+                else if (url.Contains("worldtimeapi.org"))
+                {
+                    // پردازش API جهانی و تبدیل به زمان تهران
+                    using JsonDocument doc = JsonDocument.Parse(responseContent);
+                    if (doc.RootElement.TryGetProperty("utc_datetime", out var utcElement))
+                    {
+                        string utcTimeStr = utcElement.GetString();
+                        if (DateTime.TryParse(utcTimeStr, out DateTime utcTime))
+                        {
+                            // تبدیل به زمان تهران (+3:30)
+                            TimeZoneInfo tehranZone = TimeZoneInfo.FindSystemTimeZoneById("Iran Standard Time");
+                            DateTime tehranTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, tehranZone);
+
+                            // تنظیم با در نظر گرفتن تأخیر شبکه
+                            return tehranTime.Add(networkDelay);
+                        }
+                    }
+                }
+
+                // در صورت ناموفق بودن، بازگشت زمان محلی
+                return DateTime.Now;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error in GetServerTimeWithHighPrecision: " + ex.ToString());
+                return null;
+            }
+        }
+
+
     }
 }

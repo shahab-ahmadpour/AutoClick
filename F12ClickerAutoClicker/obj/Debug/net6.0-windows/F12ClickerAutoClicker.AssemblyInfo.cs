@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("F12ClickerAutoClicker")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+701b52266e6f257ff42f05154c28ef8976f545ae")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aa6d2db0c2e45749b863a67115f8be286a51fa65")]
 [assembly: System.Reflection.AssemblyProductAttribute("F12ClickerAutoClicker")]
 [assembly: System.Reflection.AssemblyTitleAttribute("F12ClickerAutoClicker")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
